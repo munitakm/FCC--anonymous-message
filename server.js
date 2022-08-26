@@ -9,6 +9,13 @@ const fccTestingRoutes  = require('./routes/fcctesting.js');
 const runner            = require('./test-runner');
 
 const app = express();
+//Connecting to DATABASE FCC-message//
+
+const mongoose = require('mongoose');
+
+mongoose.connect(process.env.MONGO_URI)
+.then(() => console.log("Estamos conectados a DB FCC-message"));
+
 
 app.use('/public', express.static(process.cwd() + '/public'));
 
