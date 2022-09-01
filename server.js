@@ -13,10 +13,22 @@ const app = express();
 
 const mongoose = require('mongoose');
 
+
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("Estamos conectados a DB FCC-message"));
+//----------------------------------
+//Security
+ const helmet = require('helmet');
 
-
+app.use(
+	helmet.dnsPrefetchControl(), 
+	helmet.frameguard(),
+	helmet.referrerPolicy({
+		policy: ["same-origin"]
+	})
+	
+);
+//-----------------------------------
 app.use('/public', express.static(process.cwd() + '/public'));
 
 app.use(cors({origin: '*'})); //For FCC testing purposes only
