@@ -61,8 +61,8 @@ module.exports = function (app) {
 				.lean()
 					.exec((err, list) => {
 						if(!err && list) {
-							list.delete_password = undefined;
-							list.reported = undefined;
+							delete list.delete_password;
+							delete list.reported;
 							list.forEach(i => {
 								i.replycount = i.replies.length;
 
@@ -73,8 +73,8 @@ module.exports = function (app) {
 								i.replies.sort((a, b) => {
 									return a.created_on - b.created_on;
 								})
-								i.delete_password = undefined;
-								i.reported = undefined;
+								delete i.delete_password;
+								delete i.reported;
 							});
 							return res.json(list);
 						}
@@ -82,6 +82,25 @@ module.exports = function (app) {
 			} catch (err) {
 				return res.json({"message": "error get threads"})
 			}
+		})
+	//DELETE request
+		.delete(async (req, res) => {
+			let id = req.body.thread_id;
+			let pass = req.body.delete_password;
+			let found = await Thread.findOne({_id: id, board: req.body.board})
+			if(found) {
+				await bcrypt.compare(pass, found.delete_password, (err, correct) => {
+					if(err) {
+						res.send("incorrect password")
+					} else{
+						Thread.findByIdAndRemove(id, (err, deleted) => {
+							res.send("success")
+						});
+					}
+				})
+			} else {
+				res.send("incorrect password")
+			}	
 		})
 //Replies Route	
   app.route('/api/replies/:board')
@@ -128,8 +147,29 @@ module.exports = function (app) {
 						i.reported = undefined;
 					});
 					console.log(found)
-					res.json(found)
+					return res.json(found)
 				}
 			})
+		})
+	//DELETE request
+		.delete(async(req, res, next) => {
+			try {
+			let thread = await Thread.findOne({_id: req.body.thread_id, board: req.body.board})
+				for(let r of thread.replies) {
+					let testPass = await bcrypt.compare(req.body.delete_password, r.delete_password);
+					if(testPass == true && req.body.reply_id == r._id) {
+						r.text = "[deleted]";
+						Thread.update({_id: req.body.thread_id}, thread, (err, saved) => {
+							console.log(saved, "modificado")
+						})
+						return res.send("success")
+					}
+				}
+				console.log(found)
+				return res.send("incorrect password");
+				
+			} catch (err) {
+				return res.send("incorrect password");
+			}	
 		})
 }
