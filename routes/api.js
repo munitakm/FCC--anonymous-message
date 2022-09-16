@@ -102,6 +102,14 @@ module.exports = function (app) {
 				res.send("incorrect password")
 			}	
 		})
+	//PUT request
+		.put(async(req,res) => {
+			console.log(req.body)
+			let report = await Thread.findByIdAndUpdate({_id: req.body.report_id}, {$set :{reported: true}});
+			if(report) {
+				res.send("reported")
+			}
+		})
 //Replies Route	
   app.route('/api/replies/:board')
 	//POST request
@@ -160,7 +168,7 @@ module.exports = function (app) {
 					if(testPass == true && req.body.reply_id == r._id) {
 						r.text = "[deleted]";
 						Thread.update({_id: req.body.thread_id}, thread, (err, saved) => {
-							console.log(saved, "modificado")
+							console.log(saved, "deleted")
 						})
 						return res.send("success")
 					}
@@ -171,5 +179,19 @@ module.exports = function (app) {
 			} catch (err) {
 				return res.send("incorrect password");
 			}	
+		})
+	//PUT request
+		.put(async (req, res) => {
+			console.log(req.body);
+			let thread = await Thread.findById(req.body.thread_id);
+			for(let r of thread.replies) {
+				if(r._id == req.body.reply_id) {
+					r.reported = true;
+					Thread.findByIdAndUpdate(req.body.thread_id, thread, (err, updated) => {
+						console.log(thread, "reported")
+					})
+					return res.send("reported")
+				}
+			}
 		})
 }
