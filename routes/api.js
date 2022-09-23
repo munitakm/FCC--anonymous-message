@@ -3,30 +3,10 @@ const url = require('url')
 const mongoose = require('mongoose');
 const {Schema} = require('mongoose');
 const bcrypt = require('bcryptjs');
+const Thread = require('../models/thread');
+const Replie = require('../models/thread');
 
 module.exports = function (app) {
-//Mongoose Schema and Model Database
-	const repliesSchema = mongoose.Schema({
-			"text": String,
-			"delete_password": String,
-			"board": String,
-			"created_on": {type: Date},
-			"reported": {type: Boolean, default: false}
-	});
-	const Replie = mongoose.model("Replies", repliesSchema);
-
-	const threadSchema = mongoose.Schema({
-		"board": String,
-		"text": String,
-		"delete_password": {type: String},
-		"created_on": {type: Date},
-		"bumped_on": {type: Date},
-		"reported": {type: Boolean, default: false}, 
-		"replies": [],
-	});
-
-	const Thread = mongoose.model("Thread", threadSchema);
-//--------------------------------------
 
 //Threads Route
   app.route('/api/threads/:board')
@@ -48,59 +28,72 @@ module.exports = function (app) {
 		}
 		catch (err) {
 				console.log(err)
-				return res.json({"message": "error"})
+				res.json({"message": "error"})
 		}
 	})
 	//GET request
 		.get(async (req, res) => {
 			try {
-				let board = req.params.board;
+				let board = req.body.board;
+				if(!board) {
+					board = req.params.board
+				}
 				await Thread.find({board: board})
 				.sort({bumped_on: 'desc'})
 				.limit(10)
 				.lean()
-					.exec((err, list) => {
+					.exec((err, list, next) => {
 						if(!err && list) {
-							delete list.delete_password;
-							delete list.reported;
 							list.forEach(i => {
 								i.replycount = i.replies.length;
-
+							    i.delete_password = undefined;
+								i.reported = undefined;
 								i.replies.sort((a,b) => {
 									return b.created_on - a.created_on;
 								});
 								i.replies = i.replies.slice(0,3);
 								i.replies.sort((a, b) => {
 									return a.created_on - b.created_on;
+								});
+								i.replies.forEach(j => {
+									j.delete_password = undefined;
+									j.reported = undefined;
 								})
-								delete i.delete_password;
-								delete i.reported;
 							});
-							return res.json(list);
+							console.log(list);
+							console.log(typeof list)
+							res.send(list);
 						}
 					});
 			} catch (err) {
-				return res.json({"message": "error get threads"})
+				res.json("not found")
 			}
 		})
 	//DELETE request
-		.delete(async (req, res) => {
+		.delete(async (req, res, next) => {
 			let id = req.body.thread_id;
 			let pass = req.body.delete_password;
-			let found = await Thread.findOne({_id: id, board: req.body.board})
-			if(found) {
-				await bcrypt.compare(pass, found.delete_password, (err, correct) => {
-					if(err) {
-						res.send("incorrect password")
-					} else{
-						Thread.findByIdAndRemove(id, (err, deleted) => {
-							res.send("success")
-						});
+
+			if(!mongoose.Types.ObjectId.isValid(id)) {
+				return res.send("incorrect password")
+			}
+			
+			Thread.findOne({_id: id, board: req.params.board})
+				.then((found) => {
+					if(found) {
+						bcrypt.compare(pass, found.delete_password)
+							.then(login => {
+								if(login == true) {
+									console.log("passei por aqui")
+									found.remove();
+									return res.send("success");
+								}
+								return res.send("incorrect password");
+							})
+					} else {
+						return res.send("incorrect password")
 					}
 				})
-			} else {
-				res.send("incorrect password")
-			}	
 		})
 	//PUT request
 		.put(async(req,res) => {
