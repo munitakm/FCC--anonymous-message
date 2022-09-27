@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 			"reported": {type: Boolean, default: false}
 	});
 	
+	
 	module.export = mongoose.model("Replies", repliesSchema);
 	
 	const threadSchema = mongoose.Schema({
@@ -18,7 +19,7 @@ const mongoose = require('mongoose');
 		"created_on": {type: Date},
 		"bumped_on": {type: Date},
 		"reported": {type: Boolean, default: false}, 
-		"replies": Array,
+		"replies": [repliesSchema],
 	});
 
 	module.exports = mongoose.model("Thread", threadSchema);

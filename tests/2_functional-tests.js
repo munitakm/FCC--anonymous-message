@@ -10,7 +10,15 @@ chai.use(chaiHttp);
 
 let testThread = "teste";
 var tredy = "";
-
+let deleteThread =  Thread.create({
+			board: "teste",
+			text: "teste1",
+			created_on: new Date(),
+			delete_password: "teste",
+			bumped_on: new Date(),
+			replies: [],
+			reported: false
+		});
 
 suite('Functional Tests', function() {
 	test('POST request to /api/threads/{board}', (done) => {
@@ -44,5 +52,18 @@ suite('Functional Tests', function() {
 			done();
 		})
 	})
+	test("Delete thread with incorrect password", (done) => {
+		chai.request(server)
+		.delete('/api/threads/teste')
+		.send({board: "teste", thread_id: deleteThread._id, delete_password: "wrong"})
+		.end((err, res) => {
+			console.log(res);
+			assert.equal(res.status, 200),
+			assert.equal(res.text, "incorrect password"),
+			done()
+
+		})
+	});
+
 		
 });

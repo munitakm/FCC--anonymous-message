@@ -84,7 +84,6 @@ module.exports = function (app) {
 						bcrypt.compare(pass, found.delete_password)
 							.then(login => {
 								if(login == true) {
-									console.log("passei por aqui")
 									found.remove();
 									return res.send("success");
 								}
@@ -126,7 +125,7 @@ module.exports = function (app) {
 						console.log("saved replie");
 						res.redirect(`/b/${board}/${thread_id}`)
 					}
-				});
+				})
 
 			} catch(err) {
 				console.log(err)
@@ -153,25 +152,32 @@ module.exports = function (app) {
 			})
 		})
 	//DELETE request
-		.delete(async(req, res, next) => {
-			try {
-			let thread = await Thread.findOne({_id: req.body.thread_id, board: req.body.board})
-				for(let r of thread.replies) {
-					let testPass = await bcrypt.compare(req.body.delete_password, r.delete_password);
-					if(testPass == true && req.body.reply_id == r._id) {
-						r.text = "[deleted]";
-						Thread.update({_id: req.body.thread_id}, thread, (err, saved) => {
-							console.log(saved, "deleted")
-						})
-						return res.send("success")
-					}
+		.delete((req, res, next) => {
+			if(!mongoose.Types.ObjectId.isValid(req.body.thread_id
+				|| !mongoose.Types.ObjectId.isValid(req.body.reply_id))) {
+					return res.send("incorrect password 5")
 				}
-				console.log(found)
-				return res.send("incorrect password");
-				
-			} catch (err) {
-				return res.send("incorrect password");
-			}	
+			Thread.findOne({_id: req.body.thread_id, board: req.body.board})
+				.then(thread => {
+					if(thread) {
+						let reply = thread.replies.id(req.body.reply_id);
+						if(reply && reply.text !== "deleted") {
+							bcrypt.compare(req.body.delete_password, reply.delete_password)
+							.then(login => {
+								console.log(login)
+								if(login == true) {
+									reply.text = "deleted";
+									thread.save();
+									return res.send("success");
+								}
+								return res.send("incorrect password");
+							})
+						}
+						return res.send("incorrect password")
+					} else {
+						return res.send("incorrect password")
+					}
+				})
 		})
 	//PUT request
 		.put(async (req, res) => {
