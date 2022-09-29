@@ -11,7 +11,7 @@ module.exports = function (app) {
 //Threads Route
   app.route('/api/threads/:board')
 	//POST request
-	.post(async(req, res) => {
+	.post(async(req, res, next) => {
 		try {
 			let board = req.params.board;
 
@@ -24,7 +24,7 @@ module.exports = function (app) {
 				reported: false,
 				replies: []
 			});
-				return res.redirect(`/b/${board}`)
+				res.redirect(`/b/${board}`);
 		}
 		catch (err) {
 				console.log(err)
@@ -60,8 +60,6 @@ module.exports = function (app) {
 									j.reported = undefined;
 								})
 							});
-							console.log(list);
-							console.log(typeof list)
 							res.send(list);
 						}
 					});
@@ -96,7 +94,6 @@ module.exports = function (app) {
 		})
 	//PUT request
 		.put(async(req,res) => {
-			console.log(req.body)
 			let report = await Thread.findByIdAndUpdate({_id: req.body.report_id}, {$set :{reported: true}});
 			if(report) {
 				res.send("reported")
@@ -106,7 +103,6 @@ module.exports = function (app) {
   app.route('/api/replies/:board')
 	//POST request
 	.post(async(req,res) => {
-		console.log(req.body, req.params);
 		try {
 			let board = req.params.board;
 			let {text, delete_password, thread_id} = req.body;
@@ -135,7 +131,6 @@ module.exports = function (app) {
 		})
 	//GET request
 		.get((req, res) => {
-		console.log(req.query, req.params);
 			Thread.findById(req.query.thread_id)
 				.lean()
 				.exec((err, found) => {
@@ -161,12 +156,12 @@ module.exports = function (app) {
 				.then(thread => {
 					if(thread) {
 						let reply = thread.replies.id(req.body.reply_id);
-						if(reply && reply.text !== "deleted") {
+						if(reply) {
 							bcrypt.compare(req.body.delete_password, reply.delete_password)
 							.then(login => {
 								console.log(login)
 								if(login == true) {
-									reply.text = "deleted";
+									reply.text = "[deleted]";
 									thread.save();
 									return res.send("success");
 								}
@@ -181,7 +176,6 @@ module.exports = function (app) {
 		})
 	//PUT request
 		.put(async (req, res) => {
-			console.log(req.body);
 			let thread = await Thread.findById(req.body.thread_id);
 			for(let r of thread.replies) {
 				if(r._id == req.body.reply_id) {
