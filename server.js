@@ -21,8 +21,8 @@ mongoose.connect(process.env.MONGO_URI)
  const helmet = require('helmet');
 
 app.use(
-	helmet.dnsPrefetchControl(), 
-	helmet.frameguard(),
+	helmet.dnsPrefetchControl({allow: false}), 
+	helmet.frameguard({action: "sameorigin"}),
 	helmet.referrerPolicy({
 		policy: ["same-origin"]
 	})
