@@ -93,12 +93,20 @@ module.exports = function (app) {
 				})
 		})
 	//PUT request
-		.put(async(req,res) => {
-			let report = await Thread.findByIdAndUpdate({_id: req.body.report_id}, {$set :{reported: true}});
-			if(report) {
-				res.send("reported")
+		.put((req, res) => {
+			if(!mongoose.Types.ObjectId.isValid(req.body.thread_id)) {
+				return res.send("reported");
 			}
+			Thread.findById(req.body.thread_id)
+			.then(report => {
+				if(report) {
+					report.reported = true;
+					report.save();
+			} 
 		})
+			return res.send("reported")
+	})
+			
 //Replies Route	
   app.route('/api/replies/:board')
 	//POST request
@@ -118,7 +126,6 @@ module.exports = function (app) {
 						thread.replies.push(newReplie);
 						thread.bumped_on = newReplie.created_on;
 						await thread.save();
-						console.log("saved replie");
 						res.redirect(`/b/${board}/${thread_id}`)
 					}
 				})
@@ -141,39 +148,46 @@ module.exports = function (app) {
 						i.delete_password = undefined;
 						i.reported = undefined;
 					});
-					console.log(found)
 					return res.json(found)
 				}
 			})
 		})
 	//DELETE request
 		.delete((req, res, next) => {
-			if(!mongoose.Types.ObjectId.isValid(req.body.thread_id
-				|| !mongoose.Types.ObjectId.isValid(req.body.reply_id))) {
-					return res.send("incorrect password 5")
+			if(!mongoose.Types.ObjectId.isValid(req.body.thread_id)
+				|| !mongoose.Types.ObjectId.isValid(req.body.reply_id)) {
+					res.send("incorrect password");
+					next();
 				}
-			Thread.findOne({_id: req.body.thread_id, board: req.body.board})
-				.then(thread => {
-					if(thread) {
-						let reply = thread.replies.id(req.body.reply_id);
-						if(reply) {
-							bcrypt.compare(req.body.delete_password, reply.delete_password)
-							.then(login => {
-								console.log(login)
-								if(login == true) {
-									reply.text = "[deleted]";
-									thread.save();
-									return res.send("success");
-								}
-								return res.send("incorrect password");
-							})
+			else {
+				Thread.findById(req.body.thread_id)
+					.then(thread => {
+						if(thread) {
+							let replie = thread.replies.id(req.body.reply_id);
+							if(replie) {
+								bcrypt.compare(
+									req.body.delete_password,
+									replie.delete_password)
+									.then(login => {
+										console.log(login)
+										if(login == true) {
+											replie.text = "[deleted]";
+											thread.save();
+											res.send("success");
+											next();
+										} else {
+											res.send("incorrect password")
+										}
+									})
+							} else {
+								res.send("incorrect password")
+							}
+						} else {
+							res.send("incorrect password")
 						}
-						return res.send("incorrect password")
-					} else {
-						return res.send("incorrect password")
-					}
-				})
-		})
+					})
+				}
+			})
 	//PUT request
 		.put(async (req, res) => {
 			let thread = await Thread.findById(req.body.thread_id);
@@ -181,7 +195,6 @@ module.exports = function (app) {
 				if(r._id == req.body.reply_id) {
 					r.reported = true;
 					Thread.findByIdAndUpdate(req.body.thread_id, thread, (err, updated) => {
-						console.log(thread, "reported")
 					})
 					return res.send("reported")
 				}

@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 			"text": String,
 			"delete_password": String,
 			"board": String,
-			"created_on": {type: Date},
+			"created_on": {type: Date, default: new Date()},
 			"reported": {type: Boolean, default: false}
 	});
 	
@@ -16,10 +16,10 @@ const mongoose = require('mongoose');
 		"board": String,
 		"text": String,
 		"delete_password": {type: String},
-		"created_on": {type: Date},
-		"bumped_on": {type: Date},
+		"created_on": {type: Date, default: new Date()},
+		"bumped_on": {type: Date, default: new Date()},
 		"reported": {type: Boolean, default: false}, 
-		"replies": [repliesSchema],
+		"replies": {type: [repliesSchema], default: []}
 	});
 
 	module.exports = mongoose.model("Thread", threadSchema);
